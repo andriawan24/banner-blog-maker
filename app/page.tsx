@@ -1,7 +1,6 @@
 "use client";
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { toPng, toJpeg, toCanvas } from "html-to-image";
 import { jsPDF } from "jspdf";
 import { Banner, type Size } from "@/components/banner/Banner";
 import {
@@ -105,10 +104,6 @@ export default function Page() {
     return () => ro.disconnect();
   }, [SIZE.w, SIZE.h]);
 
-  // Hidden full-resolution copy used as the export source, so downloads are
-  // always crisp 1920×1080 regardless of how small the on-screen preview is.
-  const exportRef = useRef<HTMLDivElement>(null);
-
   const slug =
     t.title
       .toLowerCase()
@@ -124,7 +119,7 @@ export default function Page() {
       format,
       size: SIZE,
       rounded,
-      cornerRadius: rounded ? CORNER_RADIUS : 0,
+      radius: rounded ? CORNER_RADIUS : 0,
       ...t,
     }),
     [variant, format, SIZE, rounded, t],
@@ -135,30 +130,26 @@ export default function Page() {
     [apiLang, apiPayload],
   );
 
-  async function rasterize(): Promise<string> {
-    const node = exportRef.current!;
-    const radius = rounded ? `${CORNER_RADIUS}px` : "0px";
-    const common = {
-      width: SIZE.w,
-      height: SIZE.h,
-      pixelRatio: 1,
-      cacheBust: true,
-      style: { borderRadius: radius },
-    };
-    // PNG and WebP keep transparent corners when rounded; JPG/PDF have no
-    // alpha, so fill the corners with white instead of leaving them black.
-    if (format === "png") return toPng(node, common);
-    if (format === "webp") {
-      // html-to-image has no toWebp — encode via the canvas it produces.
-      const canvas = await toCanvas(node, common);
-      return canvas.toDataURL("image/webp", 0.96);
-    }
-    return toJpeg(node, { ...common, quality: 0.96, backgroundColor: "#ffffff" });
-  }
-
   async function build(): Promise<{ url: string; revoke?: () => void }> {
-    const dataUrl = await rasterize();
+    const png = await renderBannerPng(apiPayload);
+    let blob = png;
+
+    if (format === "webp" || format === "jpg") {
+      blob = await convertImageBlob(png, {
+        type: format === "webp" ? "image/webp" : "image/jpeg",
+        quality: 0.96,
+        backgroundColor: format === "jpg" ? "#ffffff" : undefined,
+      });
+    }
+
     if (format === "pdf") {
+      const dataUrl = await blobToDataUrl(
+        await convertImageBlob(png, {
+          type: "image/jpeg",
+          quality: 0.96,
+          backgroundColor: "#ffffff",
+        }),
+      );
       const pdf = new jsPDF({
         orientation: SIZE.w >= SIZE.h ? "landscape" : "portrait",
         unit: "px",
@@ -169,7 +160,9 @@ export default function Page() {
       const url = URL.createObjectURL(blob);
       return { url, revoke: () => URL.revokeObjectURL(url) };
     }
-    return { url: dataUrl };
+
+    const url = URL.createObjectURL(blob);
+    return { url, revoke: () => URL.revokeObjectURL(url) };
   }
 
   async function onDownload() {
@@ -180,8 +173,11 @@ export default function Page() {
       const a = document.createElement("a");
       a.href = url;
       a.download = `${slug}.${format}`;
+      a.style.display = "none";
+      document.body.append(a);
       a.click();
-      revoke?.();
+      a.remove();
+      if (revoke) window.setTimeout(revoke, 1000);
     } finally {
       setBusy(null);
     }
@@ -191,8 +187,9 @@ export default function Page() {
     if (busy) return;
     setBusy("preview");
     try {
-      const { url } = await build(); // blob/data URL opens cleanly in a new tab
+      const { url, revoke } = await build(); // blob URL opens cleanly in a new tab
       window.open(url, "_blank", "noopener,noreferrer");
+      if (revoke) window.setTimeout(revoke, 60_000);
     } finally {
       setBusy(null);
     }
@@ -390,26 +387,80 @@ export default function Page() {
         />
       </aside>
 
-      {/* Hidden full-resolution export source — clipped to 0×0 so it never
-          affects layout or creates scrollbars. */}
-      <div
-        aria-hidden
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: 0,
-          height: 0,
-          overflow: "hidden",
-          pointerEvents: "none",
-        }}
-      >
-        <div ref={exportRef} style={{ width: SIZE.w, height: SIZE.h, overflow: "hidden" }}>
-          <Banner variant={variant} t={t} size={SIZE} />
-        </div>
-      </div>
     </main>
   );
+}
+
+async function renderBannerPng(payload: Record<string, unknown>): Promise<Blob> {
+  const res = await fetch("/api/banner", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const fallback = `Banner render failed (${res.status}).`;
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(data?.error ?? fallback);
+  }
+
+  return res.blob();
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("Could not read image."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function convertImageBlob(
+  source: Blob,
+  options: {
+    type: "image/jpeg" | "image/webp";
+    quality: number;
+    backgroundColor?: string;
+  },
+): Promise<Blob> {
+  const url = URL.createObjectURL(source);
+  try {
+    const image = await loadImage(url);
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Could not prepare image export.");
+    if (options.backgroundColor) {
+      ctx.fillStyle = options.backgroundColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    ctx.drawImage(image, 0, 0);
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("This browser could not create the requested export."));
+        },
+        options.type,
+        options.quality,
+      );
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not load rendered banner."));
+    image.src = url;
+  });
 }
 
 // ── Control primitives ─────────────────────────────────────────────────────--

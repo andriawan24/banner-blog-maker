@@ -24,8 +24,8 @@ API documented with OpenAPI.
 - React 19
 - TypeScript
 - Tailwind CSS 4
-- `html-to-image` and `jspdf` for client-side exports
 - `next/og` for server-rendered PNG generation
+- `jspdf` for PDF export packaging
 
 ## Getting Started
 
