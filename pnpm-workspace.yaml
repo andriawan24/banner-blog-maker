@@ -1,7 +1,2 @@
 allowBuilds:
-  core-js: set this to true or false
-  sharp: false
-  unrs-resolver: false
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
+  core-js: false

@@ -3,28 +3,28 @@
 
 # ─── Setup ──────────────────────────────────────────────
 install: ## Install dependencies
-	npm install
+	pnpm install
 
 clean: ## Remove build artifacts and deps
 	rm -rf .next node_modules
 
 # ─── Development ────────────────────────────────────────
 dev: ## Run dev server
-	npm run dev
+	pnpm dev
 
 # ─── Build & Run ────────────────────────────────────────
 build: ## Build for production
-	npm run build
+	pnpm build
 
 start: build ## Build then start production server
-	npm run start
+	pnpm start
 
 # ─── Quality ────────────────────────────────────────────
 lint: ## Run eslint
-	npm run lint
+	pnpm lint
 
 check: lint ## Run all quality checks
-	npx tsc --noEmit
+	pnpm exec tsc --noEmit
 
 # ─── Help ───────────────────────────────────────────────
 help: ## Show this help
