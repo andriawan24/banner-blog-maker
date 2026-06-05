@@ -1,0 +1,188 @@
+openapi: 3.1.0
+info:
+  title: Banner Studio API
+  version: 1.0.0
+  description: >
+    Generate a social/blog banner as a PNG image from a JSON payload.
+    Rendering is server-side via Satori (`next/og`), so output closely
+    matches the in-app preview. Note: blur and CSS masks are not supported
+    by the rendering engine, so the `orb` background is approximated without
+    blur, and grid/dot backgrounds render without the radial fade mask.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+paths:
+  /api/banner:
+    post:
+      summary: Generate a banner image
+      description: >
+        Renders a 16:9 (or custom-size) banner and returns it as a PNG.
+        All fields are optional; omitted fields fall back to sensible
+        defaults. When `rounded` is true the PNG corners are transparent.
+      operationId: generateBanner
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BannerRequest"
+            examples:
+              minimal:
+                summary: Defaults (omit body entirely or send {})
+                value: {}
+              editorial:
+                summary: Editorial variant, custom title
+                value:
+                  variant: editorial
+                  theme: dark
+                  title: Designing systems that feel almost invisible
+                  subtitle: Notes on building a personal site.
+                  accent: "#7DD3A1"
+                  accentLastWord: true
+                  background: grid
+              openGraph:
+                summary: 1200×630 OG card, rounded corners
+                value:
+                  variant: terminal
+                  theme: mid
+                  title: Shipping the banner API
+                  rounded: true
+                  radius: 48
+                  size:
+                    w: 1200
+                    h: 630
+      responses:
+        "200":
+          description: The generated banner.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid JSON body or invalid field value.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                badEnum:
+                  value:
+                    error: "variant must be one of: editorial, terminal, spotlight."
+                badJson:
+                  value:
+                    error: "Invalid JSON body."
+        "405":
+          description: Wrong HTTP method (only POST is supported).
+          headers:
+            Allow:
+              schema:
+                type: string
+              example: POST
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    get:
+      summary: Method contract hint
+      description: Returns 405; the route only accepts POST.
+      operationId: bannerMethodHint
+      responses:
+        "405":
+          description: Only POST is supported.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    Variant:
+      type: string
+      enum: [editorial, terminal, spotlight]
+      default: editorial
+    Theme:
+      type: string
+      enum: [dark, light, mid]
+      default: dark
+    Background:
+      type: string
+      enum: [none, grid, dots, orb, lines]
+      default: grid
+    Size:
+      type: object
+      description: Output dimensions in pixels. Each axis is clamped to [320, 4096].
+      properties:
+        w:
+          type: integer
+          minimum: 320
+          maximum: 4096
+          default: 1920
+        h:
+          type: integer
+          minimum: 320
+          maximum: 4096
+          default: 1080
+    BannerRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        variant:
+          $ref: "#/components/schemas/Variant"
+        theme:
+          $ref: "#/components/schemas/Theme"
+        background:
+          $ref: "#/components/schemas/Background"
+        size:
+          $ref: "#/components/schemas/Size"
+        rounded:
+          type: boolean
+          default: false
+          description: When true, the PNG corners are rounded (and transparent).
+        radius:
+          type: number
+          minimum: 0
+          maximum: 512
+          default: 40
+          description: Corner radius in px on the artboard; only applied when `rounded` is true.
+        title:
+          type: string
+          default: Designing systems that feel almost invisible
+        subtitle:
+          type: string
+          default: Notes on building a personal site with Next.js, motion.dev, and a stubborn opinion about whitespace.
+        author:
+          type: string
+          default: Naufal Andriawan
+        handle:
+          type: string
+          default: "@andriawan"
+        site:
+          type: string
+          default: andriawan.dev
+        tag:
+          type: string
+          default: engineering
+        date:
+          type: string
+          default: May 22, 2026
+        readTime:
+          type: string
+          default: 6 min
+        accent:
+          type: string
+          description: CSS color (hex recommended) used for accents.
+          default: "#7DD3A1"
+        showAvatar:
+          type: boolean
+          default: true
+          description: Show an initials avatar (editorial and spotlight variants).
+        accentLastWord:
+          type: boolean
+          default: true
+          description: Color the last word of the title with the accent (editorial variant).
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]

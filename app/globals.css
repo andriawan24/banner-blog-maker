@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/*
+  Generator chrome — refined editorial dark.
+  Warm near-black "felt" the banner floats on, neutrals tinted toward the
+  brand's warm hue (~70deg), one warm-amber accent. OKLCH throughout so
+  lightness steps read evenly and chroma stays restrained near the extremes.
+*/
+:root {
+  --felt: oklch(0.165 0.008 70); /* canvas behind the artboard */
+  --panel: oklch(0.205 0.009 70); /* controls surface */
+  --raised: oklch(0.255 0.011 70); /* inputs, pressed segments */
+  --line: oklch(0.32 0.01 70 / 0.55); /* hairline borders */
+  --line-soft: oklch(0.32 0.01 70 / 0.3);
+
+  --fg: oklch(0.94 0.012 80); /* bone */
+  --fg-muted: oklch(0.74 0.011 80);
+  --fg-faint: oklch(0.55 0.009 80);
+
+  --accent: oklch(0.81 0.125 70); /* warm amber */
+  --accent-ink: oklch(0.2 0.02 70); /* text on accent */
+
+  --background: var(--felt);
+  --foreground: var(--fg);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-felt: var(--felt);
+  --color-panel: var(--panel);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-faint: var(--fg-faint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --font-display: var(--font-display);
+  --font-ui: var(--font-ui);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* One orchestrated page-load: panel and stage rise into place. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+}
