@@ -27,6 +27,26 @@ const ui = Hanken_Grotesk({
 export const metadata: Metadata = {
   title: "Banner Generator",
   description: "Generate customizable social and blog banners.",
+  manifest: "/site.webmanifest",
+  icons: [
+    {
+      rel: "apple-touch-icon",
+      sizes: "180x180",
+      url: "/apple-touch-icon.png",
+    },
+    {
+      rel: "icon",
+      type: "image/png",
+      sizes: "32x32",
+      url: "/favicon-32x32.png",
+    },
+    {
+      rel: "icon",
+      type: "image/png",
+      sizes: "16x16",
+      url: "/favicon-16x16.png",
+    },
+  ],
 };
 
 export const viewport: Viewport = {
