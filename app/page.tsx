@@ -3,6 +3,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { jsPDF } from "jspdf";
 import { Banner, type Size } from "@/components/banner/Banner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   ACCENT_OPTIONS,
   BACKGROUND_OPTIONS,
@@ -239,11 +240,14 @@ export default function Page() {
               Social &amp; blog banner generator
             </p>
           </div>
-          <span
-            className="h-2.5 w-2.5 rounded-full bg-accent"
-            style={{ boxShadow: "0 0 12px var(--accent)" }}
-            aria-hidden
-          />
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <span
+              className="h-2.5 w-2.5 rounded-full bg-accent"
+              style={{ boxShadow: "0 0 12px var(--accent)" }}
+              aria-hidden
+            />
+          </div>
         </header>
 
         <div className="flex flex-col gap-5">

@@ -24,6 +24,28 @@
   --foreground: var(--fg);
 }
 
+/*
+  Light chrome — same warm-neutral hue family, inverted to a bright paper feel.
+  Toggled by `data-theme="light"` on <html>; falls back to dark via :root above.
+*/
+:root[data-theme="light"] {
+  --felt: oklch(0.985 0.004 70); /* canvas behind the artboard */
+  --panel: oklch(0.97 0.005 70); /* controls surface */
+  --raised: oklch(0.99 0.003 70); /* inputs, pressed segments */
+  --line: oklch(0.3 0.01 70 / 0.5); /* hairline borders */
+  --line-soft: oklch(0.3 0.01 70 / 0.22);
+
+  --fg: oklch(0.22 0.012 80); /* ink */
+  --fg-muted: oklch(0.42 0.011 80);
+  --fg-faint: oklch(0.6 0.009 80);
+
+  --accent: oklch(0.62 0.16 60); /* deeper amber for contrast on paper */
+  --accent-ink: oklch(0.99 0.005 70);
+
+  --background: var(--felt);
+  --foreground: var(--fg);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
