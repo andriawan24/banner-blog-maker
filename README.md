@@ -15,7 +15,7 @@ API documented with OpenAPI.
 - Export to PNG, WebP, JPG, or PDF from a crisp full-resolution artboard.
 - Local browser persistence for the latest editor configuration.
 - Server-side `/api/banner` image generation route powered by `next/og`.
-- Multipart `/api/upload` route for adding image assets to generated banners.
+- Multipart `/api/upload` route for adding image assets to S3-compatible storage.
 - OpenAPI contract in `openapi.yml` for API clients and documentation tooling.
 
 ## Tech Stack
@@ -69,6 +69,25 @@ curl -X POST http://localhost:3000/api/banner \
 ```
 
 See `openapi.yml` for the complete request schema.
+
+## Image Upload Storage
+
+Uploads are stored in S3-compatible object storage. For Garage, configure these
+environment variables in production:
+
+```bash
+S3_BUCKET=your-bucket
+S3_ENDPOINT=https://s3.example.com
+S3_REGION=garage
+S3_ACCESS_KEY_ID=your-access-key
+S3_SECRET_ACCESS_KEY=your-secret-key
+S3_FORCE_PATH_STYLE=true
+S3_PUBLIC_BASE_URL=https://s3.example.com/your-bucket
+S3_UPLOAD_PREFIX=uploads
+```
+
+`S3_PUBLIC_BASE_URL` must be publicly readable because uploaded images are used
+by the browser preview and the server-side banner renderer.
 
 ## Deploy on Vercel
 

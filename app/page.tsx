@@ -542,7 +542,7 @@ function ImageInput({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="https://… or /uploads/…"
+        placeholder="https://…"
         className="rounded-lg border border-line bg-raised px-3 py-2 text-sm text-fg outline-none transition placeholder:text-fg-faint focus:border-accent/70 focus:ring-2 focus:ring-accent/20"
       />
       <div className="flex items-center gap-2">
@@ -576,7 +576,7 @@ function ImageInput({
       </div>
       {error && <p className="text-[11px] text-red-400">{error}</p>}
       <p className="text-[11px] text-fg-faint">
-        Uploads save to <code className="text-fg-muted">/public/uploads</code>.
+        Uploads save to configured S3 storage.
       </p>
     </div>
   );
