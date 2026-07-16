@@ -1,9 +1,12 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { jsPDF } from "jspdf";
+import JSZip from "jszip";
+import { useSession } from "next-auth/react";
 import { Banner, type Size } from "@/components/banner/Banner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AccountBar } from "@/components/auth/AccountBar";
 import {
   ACCENT_OPTIONS,
   BACKGROUND_OPTIONS,
@@ -37,6 +40,15 @@ const DEFAULTS = {
 };
 type SavedConfig = typeof DEFAULTS;
 
+// A banner config saved to the signed-in user's account (server-persisted,
+// distinct from the anonymous localStorage save above).
+type RemoteConfig = {
+  id: string;
+  name: string;
+  config: Partial<SavedConfig>;
+  updatedAt: string;
+};
+
 export default function Page() {
   const [t, setT] = useState<Tweaks>(DEFAULT_TWEAKS);
   const [variant, setVariant] = useState<Variant>("editorial");
@@ -46,6 +58,89 @@ export default function Page() {
   const [apiLang, setApiLang] = useState<ApiLang>("cURL");
 
   const [saved, setSaved] = useState(false);
+
+  // Authenticated-only cloud save/list — anonymous visitors never see or
+  // touch this: `useSession` reports "unauthenticated" and the fetch below
+  // is gated behind `isAuthed`, so nothing is fetched or persisted for them.
+  const { status: sessionStatus } = useSession();
+  const isAuthed = sessionStatus === "authenticated";
+  const [remoteConfigs, setRemoteConfigs] = useState<RemoteConfig[]>([]);
+  const [configName, setConfigName] = useState("");
+  const [cloudBusy, setCloudBusy] = useState(false);
+  const [cloudError, setCloudError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuthed) {
+      // Deferred (not called synchronously in the effect body) to match the
+      // localStorage-restore effect's pattern above and avoid cascading
+      // renders directly inside the effect.
+      queueMicrotask(() => setRemoteConfigs([]));
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/banner-configs");
+        if (!res.ok) return;
+        const data = (await res.json()) as { configs?: RemoteConfig[] };
+        if (!cancelled) setRemoteConfigs(data.configs ?? []);
+      } catch {
+        /* ignore — list simply stays empty */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthed]);
+
+  async function saveToAccount() {
+    if (!isAuthed || cloudBusy) return;
+    const name = configName.trim() || t.title.trim() || "Untitled banner";
+    setCloudBusy(true);
+    setCloudError(null);
+    try {
+      const config: SavedConfig = { t, variant, format, rounded };
+      const res = await fetch("/api/banner-configs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, config }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { config?: RemoteConfig; error?: string }
+        | null;
+      if (!res.ok || !data?.config) {
+        setCloudError(data?.error ?? "Could not save config.");
+        return;
+      }
+      setRemoteConfigs((prev) => [data.config as RemoteConfig, ...prev]);
+      setConfigName("");
+    } catch {
+      setCloudError("Could not save config.");
+    } finally {
+      setCloudBusy(false);
+    }
+  }
+
+  function loadRemoteConfig(rc: RemoteConfig) {
+    const c = rc.config;
+    if (c.t) setT({ ...DEFAULT_TWEAKS, ...c.t });
+    if (c.variant) setVariant(c.variant);
+    if (c.format) setFormat(c.format);
+    if (typeof c.rounded === "boolean") setRounded(c.rounded);
+  }
+
+  async function deleteRemoteConfig(id: string) {
+    if (cloudBusy) return;
+    setCloudBusy(true);
+    try {
+      await fetch(`/api/banner-configs/${id}`, { method: "DELETE" });
+      setRemoteConfigs((prev) => prev.filter((c) => c.id !== id));
+    } catch {
+      setCloudError("Could not delete config.");
+    } finally {
+      setCloudBusy(false);
+    }
+  }
 
   const set = <K extends keyof Tweaks>(key: K, value: Tweaks[K]) =>
     setT((prev) => ({ ...prev, [key]: value }));
@@ -131,9 +226,14 @@ export default function Page() {
     [apiLang, apiPayload],
   );
 
-  async function build(): Promise<{ url: string; revoke?: () => void }> {
-    const png = await renderBannerPng(apiPayload);
-    let blob = png;
+  // Renders the banner for a given payload (the current config, optionally
+  // with `theme` overridden) into a single Blob in the currently selected
+  // export format. Both light and dark exports call this with the same
+  // payload shape — only `theme` differs — so content never drifts between
+  // the two renders.
+  async function buildBlob(payload: Record<string, unknown>): Promise<Blob> {
+    const png = await renderBannerPng(payload);
+    let blob: Blob = png;
 
     if (format === "webp" || format === "jpg") {
       blob = await convertImageBlob(png, {
@@ -157,28 +257,38 @@ export default function Page() {
         format: [SIZE.w, SIZE.h],
       });
       pdf.addImage(dataUrl, "JPEG", 0, 0, SIZE.w, SIZE.h);
-      const blob = pdf.output("blob");
-      const url = URL.createObjectURL(blob);
-      return { url, revoke: () => URL.revokeObjectURL(url) };
+      blob = pdf.output("blob");
     }
 
-    const url = URL.createObjectURL(blob);
-    return { url, revoke: () => URL.revokeObjectURL(url) };
+    return blob;
   }
 
+  // Export always produces both a light-mode and a dark-mode rendition of
+  // the current config in one action (no pre-export mode picker), bundled
+  // into a single .zip with mode-indicating file names. Renders run
+  // sequentially (not in parallel) to keep memory bounded, and the whole
+  // dual-render + zip duration is covered by the `busy` loading state.
   async function onDownload() {
     if (busy) return;
     setBusy("download");
     try {
-      const { url, revoke } = await build();
+      const lightBlob = await buildBlob({ ...apiPayload, theme: "light" });
+      const darkBlob = await buildBlob({ ...apiPayload, theme: "dark" });
+
+      const zip = new JSZip();
+      zip.file(`${slug}-light.${format}`, lightBlob);
+      zip.file(`${slug}-dark.${format}`, darkBlob);
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+
+      const url = URL.createObjectURL(zipBlob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${slug}.${format}`;
+      a.download = `${slug}.zip`;
       a.style.display = "none";
       document.body.append(a);
       a.click();
       a.remove();
-      if (revoke) window.setTimeout(revoke, 1000);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } finally {
       setBusy(null);
     }
@@ -188,9 +298,10 @@ export default function Page() {
     if (busy) return;
     setBusy("preview");
     try {
-      const { url, revoke } = await build(); // blob URL opens cleanly in a new tab
+      const blob = await buildBlob(apiPayload); // blob URL opens cleanly in a new tab
+      const url = URL.createObjectURL(blob);
       window.open(url, "_blank", "noopener,noreferrer");
-      if (revoke) window.setTimeout(revoke, 60_000);
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } finally {
       setBusy(null);
     }
@@ -241,6 +352,7 @@ export default function Page() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <AccountBar />
             <ThemeToggle />
             <span
               className="h-2.5 w-2.5 rounded-full bg-accent"
@@ -357,7 +469,7 @@ export default function Page() {
             disabled={!!busy}
             className="flex-1 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink transition hover:brightness-105 disabled:opacity-50"
           >
-            {busy === "download" ? "Exporting…" : `Download .${format}`}
+            {busy === "download" ? "Exporting…" : `Download .zip (light + dark)`}
           </button>
         </div>
 
@@ -381,6 +493,67 @@ export default function Page() {
         <p className="-mt-3 text-[11px] text-fg-faint">
           Saves to this browser. Reset restores defaults.
         </p>
+
+        {/* Hallmark · design-system: design.md · designed-as-app —
+            cloud save/list chrome raised to the same row/focus treatment as
+            the rest of the Workbench's controls (borders, hover, focus-visible rings). */}
+        <Section>My account</Section>
+        {isAuthed ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-2">
+              <input
+                value={configName}
+                onChange={(e) => setConfigName(e.target.value)}
+                placeholder={t.title || "Config name"}
+                className="flex-1 rounded-lg border border-line bg-raised px-3 py-2 text-sm text-fg outline-none transition placeholder:text-fg-faint hover:bg-felt/40 focus-visible:border-accent/70 focus-visible:ring-2 focus-visible:ring-accent/20"
+              />
+              <button
+                type="button"
+                onClick={saveToAccount}
+                disabled={cloudBusy}
+                className="shrink-0 rounded-lg border border-line bg-raised px-4 py-2 text-sm font-medium text-fg transition hover:border-fg-faint active:bg-felt/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-1 focus-visible:ring-offset-panel disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {cloudBusy ? "Saving…" : "Save to account"}
+              </button>
+            </div>
+            {cloudError && <p className="text-[11px] text-red-400">{cloudError}</p>}
+            {remoteConfigs.length > 0 ? (
+              <ul className="flex flex-col gap-1.5">
+                {remoteConfigs.map((rc) => (
+                  <li
+                    key={rc.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-line bg-raised px-3 py-2 text-sm transition hover:border-fg-faint"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => loadRemoteConfig(rc)}
+                      className="min-w-0 flex-1 truncate rounded text-left text-fg transition hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+                      title={`Load "${rc.name}"`}
+                    >
+                      {rc.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteRemoteConfig(rc.id)}
+                      disabled={cloudBusy}
+                      className="shrink-0 rounded text-[11px] text-fg-faint transition hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[11px] text-fg-faint">
+                No saved configs yet — save the current banner to your account.
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-[11px] text-fg-faint">
+            Sign in to save configs to your account and load them on any device.
+          </p>
+        )}
 
         <Section>API request</Section>
         <ApiPreview

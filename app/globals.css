@@ -91,3 +91,14 @@ body {
     animation: none;
   }
 }
+
+/* Hallmark · design-system: design.md · designed-as-app
+   Auth-route canvas: the same felt surface as the studio, with a soft
+   radial vignette (built only from existing --line-soft / --felt tokens —
+   no new palette) so the card the form sits on reads as "placed" rather
+   than pasted onto a flat rectangle. */
+.auth-canvas {
+  background:
+    radial-gradient(ellipse 65% 45% at 50% 16%, var(--line-soft), transparent 62%),
+    var(--felt);
+}
