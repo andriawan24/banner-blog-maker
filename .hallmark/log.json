@@ -1,0 +1,11 @@
+[
+  {
+    "date": "2026-07-16",
+    "scope": "app",
+    "macrostructure": "Workbench (app) / centered-card (auth)",
+    "theme": "Atelier (custom)",
+    "theme_axes": "dark-mid / roman-serif-display / warm-clay-accent",
+    "enrichment": "none",
+    "brief": "Banner Studio · full redesign — replace warm-amber system with moss/clay Atelier identity, fix generic segmented control + glow, add CTA motion"
+  }
+]
