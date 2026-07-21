@@ -53,7 +53,7 @@ export default function SignUpPage() {
       <form
         onSubmit={onSubmit}
         noValidate
-        className="rise flex flex-col gap-6 rounded-xl border border-line bg-panel p-7 shadow-[0_1px_2px_rgba(0,0,0,0.14),0_20px_44px_-20px_rgba(0,0,0,0.4)] sm:p-8"
+        className="rise flex flex-col gap-6 rounded-xl border border-line bg-panel p-6 shadow-[0_0_0_1px_var(--line-soft)] sm:p-8"
       >
         <div className="flex flex-col gap-1.5">
           <h1 className="font-display text-2xl font-semibold tracking-tight text-fg">
@@ -75,7 +75,7 @@ export default function SignUpPage() {
               aria-describedby={error ? errorId : undefined}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={`rounded-lg border bg-raised px-3.5 py-2.5 text-sm text-fg outline-none transition placeholder:text-fg-faint hover:bg-felt/40 focus-visible:ring-2 focus-visible:ring-accent/20 ${
+              className={`min-h-[44px] rounded-lg border bg-raised px-3.5 py-2.5 text-sm text-fg outline-none transition placeholder:text-fg-faint hover:bg-felt/40 focus-visible:ring-2 focus-visible:ring-accent/20 ${
                 error ? "border-red-400/60 focus-visible:border-red-400/70" : "border-line focus-visible:border-accent/70"
               }`}
             />
@@ -91,7 +91,7 @@ export default function SignUpPage() {
               aria-describedby={error ? `${errorId}-hint ${errorId}` : `${errorId}-hint`}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={`rounded-lg border bg-raised px-3.5 py-2.5 text-sm text-fg outline-none transition placeholder:text-fg-faint hover:bg-felt/40 focus-visible:ring-2 focus-visible:ring-accent/20 ${
+              className={`min-h-[44px] rounded-lg border bg-raised px-3.5 py-2.5 text-sm text-fg outline-none transition placeholder:text-fg-faint hover:bg-felt/40 focus-visible:ring-2 focus-visible:ring-accent/20 ${
                 error ? "border-red-400/60 focus-visible:border-red-400/70" : "border-line focus-visible:border-accent/70"
               }`}
             />
@@ -112,7 +112,7 @@ export default function SignUpPage() {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink transition hover:brightness-105 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-panel disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-[44px] rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink transition-[filter,transform] duration-micro ease-out hover:brightness-105 hover:-translate-y-px active:translate-y-0 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-panel disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
         >
           {busy ? "Creating…" : "Create account"}
         </button>

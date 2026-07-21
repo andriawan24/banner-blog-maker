@@ -1,46 +1,58 @@
+/* Hallmark · pre-emit critique: P5 H4 E5 S4 R4 V4
+   genre: editorial · macrostructure: Workbench (app) / centered-card (auth)
+   theme: Atelier (custom) · design-system: design.md · designed-as-app */
 @import "tailwindcss";
 
 /*
-  Generator chrome — refined editorial dark.
-  Warm near-black "felt" the banner floats on, neutrals tinted toward the
-  brand's warm hue (~70deg), one warm-amber accent. OKLCH throughout so
-  lightness steps read evenly and chroma stays restrained near the extremes.
+  Atelier — a moss-and-clay studio palette, replacing the prior warm-amber
+  scheme wholesale (full redesign, not a per-page drift). Neutrals tint
+  toward a quiet sage (~150deg); the single accent is a contrasting clay
+  terracotta (~40deg) so the highlighter reads as a deliberate pigment
+  choice, not a hue-shifted copy of the neutrals. OKLCH throughout.
 */
 :root {
-  --felt: oklch(0.165 0.008 70); /* canvas behind the artboard */
-  --panel: oklch(0.205 0.009 70); /* controls surface */
-  --raised: oklch(0.255 0.011 70); /* inputs, pressed segments */
-  --line: oklch(0.32 0.01 70 / 0.55); /* hairline borders */
-  --line-soft: oklch(0.32 0.01 70 / 0.3);
+  --felt: oklch(0.15 0.012 150); /* canvas behind the artboard */
+  --panel: oklch(0.19 0.013 150); /* controls surface */
+  --raised: oklch(0.24 0.015 150); /* inputs, pressed segments */
+  --line: oklch(0.4 0.014 150 / 0.4); /* hairline borders */
+  --line-soft: oklch(0.4 0.014 150 / 0.22);
 
-  --fg: oklch(0.94 0.012 80); /* bone */
-  --fg-muted: oklch(0.74 0.011 80);
-  --fg-faint: oklch(0.55 0.009 80);
+  --fg: oklch(0.94 0.01 150); /* parchment */
+  --fg-muted: oklch(0.74 0.012 150);
+  --fg-faint: oklch(0.54 0.01 150);
 
-  --accent: oklch(0.81 0.125 70); /* warm amber */
-  --accent-ink: oklch(0.2 0.02 70); /* text on accent */
+  --accent: oklch(0.7 0.15 40); /* clay terracotta */
+  --accent-ink: oklch(0.16 0.02 40); /* text on accent */
 
   --background: var(--felt);
   --foreground: var(--fg);
+
+  /* Motion — three named easings, three named durations (motion.md). */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-micro: 120ms;
+  --duration-short: 220ms;
+  --duration-long: 420ms;
 }
 
 /*
-  Light chrome — same warm-neutral hue family, inverted to a bright paper feel.
-  Toggled by `data-theme="light"` on <html>; falls back to dark via :root above.
+  Light chrome — same sage/clay hue family, inverted to a bright paper.
+  Toggled by `data-theme="light"` on <html>; falls back to dark via :root.
 */
 :root[data-theme="light"] {
-  --felt: oklch(0.985 0.004 70); /* canvas behind the artboard */
-  --panel: oklch(0.97 0.005 70); /* controls surface */
-  --raised: oklch(0.99 0.003 70); /* inputs, pressed segments */
-  --line: oklch(0.3 0.01 70 / 0.5); /* hairline borders */
-  --line-soft: oklch(0.3 0.01 70 / 0.22);
+  --felt: oklch(0.975 0.006 150);
+  --panel: oklch(0.95 0.008 150);
+  --raised: oklch(0.99 0.004 150);
+  --line: oklch(0.4 0.016 150 / 0.4);
+  --line-soft: oklch(0.4 0.016 150 / 0.2);
 
-  --fg: oklch(0.22 0.012 80); /* ink */
-  --fg-muted: oklch(0.42 0.011 80);
-  --fg-faint: oklch(0.6 0.009 80);
+  --fg: oklch(0.25 0.015 150);
+  --fg-muted: oklch(0.43 0.013 150);
+  --fg-faint: oklch(0.58 0.011 150);
 
-  --accent: oklch(0.62 0.16 60); /* deeper amber for contrast on paper */
-  --accent-ink: oklch(0.99 0.005 70);
+  --accent: oklch(0.56 0.16 38); /* deeper clay for contrast on paper */
+  --accent-ink: oklch(0.99 0.006 60);
 
   --background: var(--felt);
   --foreground: var(--fg);
@@ -61,13 +73,24 @@
   --color-accent-ink: var(--accent-ink);
   --font-display: var(--font-display);
   --font-ui: var(--font-ui);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-jetbrains-mono);
+  --ease-out: var(--ease-out);
+  --ease-in: var(--ease-in);
+  --ease-in-out: var(--ease-in-out);
+  --duration-micro: var(--duration-micro);
+  --duration-short: var(--duration-short);
+  --duration-long: var(--duration-long);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: color-mix(in oklch, var(--accent) 35%, transparent);
+  color: var(--fg);
 }
 
 /* One orchestrated page-load: panel and stage rise into place. */
@@ -83,12 +106,16 @@ body {
 }
 
 .rise {
-  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise var(--duration-long) var(--ease-out) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .rise {
     animation: none;
+  }
+
+  * {
+    transition-duration: var(--duration-micro) !important;
   }
 }
 
@@ -101,4 +128,30 @@ body {
   background:
     radial-gradient(ellipse 65% 45% at 50% 16%, var(--line-soft), transparent 62%),
     var(--felt);
+}
+
+/* Hallmark · design-system: design.md · designed-as-app
+   Collapsible control sections (native <details>), used by the editor
+   controls panel below `lg` and, unstyled by the browser default, on `lg+`
+   too — the marker just rotates instead of animating open/close height. */
+.section-details > summary {
+  list-style: none;
+}
+
+.section-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.section-details > summary .section-caret {
+  transition: transform var(--duration-short) var(--ease-out);
+}
+
+.section-details[open] > summary .section-caret {
+  transform: rotate(90deg);
+}
+
+/* Mobile action bar: pad for iOS home-indicator / gesture area so the
+   Preview/Download bar never sits under the system chrome. */
+.safe-bottom {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }

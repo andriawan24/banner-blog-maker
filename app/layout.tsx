@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Bricolage_Grotesque, Hanken_Grotesk } from "next/font/google";
+import { Geist, Geist_Mono, Fraunces, IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
 
@@ -14,14 +14,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Generator chrome: a characterful grotesque for headings, a warm body grotesque for UI.
-const display = Bricolage_Grotesque({
+// Studio chrome: an expressive variable serif for display, a plain
+// engineering sans for UI/body, and a mono outlier reserved for the API
+// snippet + artboard size readout — never a third body font.
+const display = Fraunces({
   variable: "--font-display",
+  subsets: ["latin"],
+  axes: ["opsz", "SOFT", "WONK"],
+});
+
+const ui = IBM_Plex_Sans({
+  variable: "--font-ui",
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
 });
 
-const ui = Hanken_Grotesk({
-  variable: "--font-ui",
+const mono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
 
@@ -51,7 +60,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#211f1b",
+  themeColor: "#171a13",
   colorScheme: "dark light",
 };
 
@@ -66,7 +75,7 @@ const noFlashScript = `
       : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     document.documentElement.dataset.theme = t;
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', t === 'light' ? '#f9f7f1' : '#211f1b');
+    if (m) m.setAttribute('content', t === 'light' ? '#f8f9f5' : '#171a13');
   } catch (e) {}
 })();
 `;
@@ -80,7 +89,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme="dark"
-      className={`${geistSans.variable} ${geistMono.variable} ${display.variable} ${ui.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${display.variable} ${ui.variable} ${mono.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />

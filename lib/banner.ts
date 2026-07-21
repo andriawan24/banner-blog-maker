@@ -56,6 +56,31 @@ export const BACKGROUND_OPTIONS: Background[] = [
   "lines",
 ];
 
+export const VARIANTS: Variant[] = ["editorial", "terminal", "spotlight", "square"];
+export const THEMES: Theme[] = ["dark", "light", "mid"];
+export const FORMATS = ["png", "webp", "jpg", "pdf"] as const;
+export type ExportFormat = (typeof FORMATS)[number];
+
+// The full shape persisted for one banner config — used both for the
+// anonymous localStorage save and the signed-in cloud save
+// (`BannerConfig.config` JSON column), so editor and Profile agree on shape.
+export type SavedBannerConfig = {
+  t: Tweaks;
+  variant: Variant;
+  format: ExportFormat;
+  rounded: boolean;
+};
+
+// A banner config saved to the signed-in user's account via
+// `/api/banner-configs` (server-persisted, distinct from the anonymous
+// localStorage save).
+export type RemoteBannerConfig = {
+  id: string;
+  name: string;
+  config: Partial<SavedBannerConfig>;
+  updatedAt: string;
+};
+
 export type ThemeTokens = {
   bg: string;
   bgAlt: string;
