@@ -54,11 +54,7 @@ the development server:
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to use the editor. Note
-that `middleware.ts` restricts every `/api/*` route (including
-`/api/auth/*` and `/api/banner-configs`) to the host configured in
-`API_DOMAIN` — set it to `localhost:3000` for local development, or sign-in/
-sign-up and the studio's export/upload routes will all 404.
+Open [http://localhost:3000](http://localhost:3000) to use the editor.
 
 ## Useful Commands
 
@@ -150,9 +146,6 @@ before. Creating an account additionally unlocks:
 - `PATCH /api/banner-configs/:id` / `DELETE /api/banner-configs/:id` —
   update/delete a config; scoped to the owning user (403/404 for configs
   belonging to someone else).
-
-All of the above live under `/api/*` and are therefore also gated by the
-`API_DOMAIN` middleware check described above.
 
 ## Image Upload Storage
 
