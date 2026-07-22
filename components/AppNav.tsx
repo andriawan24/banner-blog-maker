@@ -46,7 +46,6 @@ export function AppNav() {
       <div className="flex items-center gap-3">
         <AccountBar />
         <ThemeToggle />
-        <span className="h-1.5 w-4 rounded-full bg-accent" aria-hidden />
       </div>
     </header>
   );
