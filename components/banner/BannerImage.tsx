@@ -11,7 +11,25 @@ import {
   type Background,
   type Variant,
   themeTokens,
+  metaParts,
 } from "@/lib/banner";
+
+// Interleaves present metadata values with a styled dot separator. Built as a
+// flat array (no Fragment) since Satori requires explicit children.
+function metaNodes(parts: string[], dotColor: string): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  parts.forEach((part, i) => {
+    if (i > 0) {
+      out.push(
+        <span key={`d${i}`} style={{ color: dotColor }}>
+          ·
+        </span>,
+      );
+    }
+    out.push(<span key={`m${i}`}>{part}</span>);
+  });
+  return out;
+}
 
 export type Size = { w: number; h: number };
 
@@ -189,39 +207,45 @@ function Editorial({ t, size, radius }: { t: Tweaks; size: Size; radius: number 
         }}
       >
         {/* Top row */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            fontFamily: MONO,
-            fontSize: metaSize,
-            color: tok.fgMuted,
-          }}
-        >
+        {(t.tag || t.site) && (
           <div
             style={{
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 8 * s,
-              padding: `${6 * s}px ${12 * s}px`,
-              borderRadius: 999,
-              border: `1px solid ${tok.line}`,
-              background: tok.card,
+              fontFamily: MONO,
+              fontSize: metaSize,
+              color: tok.fgMuted,
             }}
           >
-            <div
-              style={{
-                width: 6 * s,
-                height: 6 * s,
-                borderRadius: 999,
-                background: t.accent,
-              }}
-            />
-            {t.tag}
+            {t.tag ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8 * s,
+                  padding: `${6 * s}px ${12 * s}px`,
+                  borderRadius: 999,
+                  border: `1px solid ${tok.line}`,
+                  background: tok.card,
+                }}
+              >
+                <div
+                  style={{
+                    width: 6 * s,
+                    height: 6 * s,
+                    borderRadius: 999,
+                    background: t.accent,
+                  }}
+                />
+                {t.tag}
+              </div>
+            ) : (
+              <div style={{ display: "flex" }} />
+            )}
+            {t.site ? <div style={{ display: "flex" }}>{t.site}</div> : <div style={{ display: "flex" }} />}
           </div>
-          <div style={{ display: "flex" }}>{t.site}</div>
-        </div>
+        )}
 
         {/* Title block */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 * s, maxWidth: "80%" }}>
@@ -266,19 +290,23 @@ function Editorial({ t, size, radius }: { t: Tweaks; size: Size; radius: number 
         <div style={{ display: "flex", alignItems: "center", gap: 16 * s, width: "100%" }}>
           {t.showAvatar ? <Avatar d={48 * s} tok={tok} name={t.author} /> : null}
           <div style={{ display: "flex", flexDirection: "column", gap: 4 * s }}>
-            <div style={{ display: "flex", fontSize: metaSize * 1.05, fontWeight: 500, color: tok.fg }}>
-              {t.author}
-            </div>
-            <div style={{ display: "flex", fontFamily: MONO, fontSize: metaSize * 0.85, color: tok.fgMuted, gap: 10 * s }}>
-              <span>{t.date}</span>
-              <span style={{ color: tok.fgFaint }}>·</span>
-              <span>{t.readTime}</span>
-            </div>
+            {t.author ? (
+              <div style={{ display: "flex", fontSize: metaSize * 1.05, fontWeight: 500, color: tok.fg }}>
+                {t.author}
+              </div>
+            ) : null}
+            {metaParts(t.date, t.readTime).length > 0 ? (
+              <div style={{ display: "flex", fontFamily: MONO, fontSize: metaSize * 0.85, color: tok.fgMuted, gap: 10 * s }}>
+                {metaNodes(metaParts(t.date, t.readTime), tok.fgFaint)}
+              </div>
+            ) : null}
           </div>
           <div style={{ display: "flex", flexGrow: 1 }} />
-          <div style={{ display: "flex", fontFamily: MONO, fontSize: metaSize, color: tok.fgFaint, letterSpacing: "0.05em" }}>
-            ↗ {t.handle}
-          </div>
+          {t.handle ? (
+            <div style={{ display: "flex", fontFamily: MONO, fontSize: metaSize, color: tok.fgFaint, letterSpacing: "0.05em" }}>
+              ↗ {t.handle}
+            </div>
+          ) : null}
         </div>
       </div>
     </Root>
@@ -311,8 +339,12 @@ function Terminal({ t, size, radius }: { t: Tweaks; size: Size; radius: number }
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 * s, fontSize: lineSize, color: tok.fgMuted }}>
-          <span style={{ color: t.accent }}>~/{t.site.replace(/^https?:\/\//, "")}</span>
-          <span style={{ color: tok.fgFaint }}>·</span>
+          {t.site ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 12 * s }}>
+              <span style={{ color: t.accent }}>~/{t.site.replace(/^https?:\/\//, "")}</span>
+              <span style={{ color: tok.fgFaint }}>·</span>
+            </div>
+          ) : null}
           <span>main</span>
           <span style={{ color: tok.fgFaint }}>$</span>
           <span style={{ color: tok.fg }}>cat posts/{slug}.mdx</span>
@@ -320,20 +352,28 @@ function Terminal({ t, size, radius }: { t: Tweaks; size: Size; radius: number }
 
         <div style={{ display: "flex", height: 1, background: tok.line }} />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 * s, fontSize: lineSize, color: tok.fgMuted }}>
-          <div style={{ display: "flex", gap: 16 * s }}>
-            <span style={{ color: tok.fgFaint }}>tag:</span>
-            <span style={{ color: t.accent }}>{`"${t.tag}"`}</span>
+        {(t.tag || t.author || t.date) ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 * s, fontSize: lineSize, color: tok.fgMuted }}>
+            {t.tag ? (
+              <div style={{ display: "flex", gap: 16 * s }}>
+                <span style={{ color: tok.fgFaint }}>tag:</span>
+                <span style={{ color: t.accent }}>{`"${t.tag}"`}</span>
+              </div>
+            ) : null}
+            {t.author ? (
+              <div style={{ display: "flex", gap: 16 * s }}>
+                <span style={{ color: tok.fgFaint }}>author:</span>
+                <span style={{ color: tok.fg }}>{`"${t.author}"`}</span>
+              </div>
+            ) : null}
+            {t.date ? (
+              <div style={{ display: "flex", gap: 16 * s }}>
+                <span style={{ color: tok.fgFaint }}>date:</span>
+                <span>{`"${t.date}"`}</span>
+              </div>
+            ) : null}
           </div>
-          <div style={{ display: "flex", gap: 16 * s }}>
-            <span style={{ color: tok.fgFaint }}>author:</span>
-            <span style={{ color: tok.fg }}>{`"${t.author}"`}</span>
-          </div>
-          <div style={{ display: "flex", gap: 16 * s }}>
-            <span style={{ color: tok.fgFaint }}>date:</span>
-            <span>{`"${t.date}"`}</span>
-          </div>
-        </div>
+        ) : null}
 
         <div
           style={{
@@ -359,16 +399,26 @@ function Terminal({ t, size, radius }: { t: Tweaks; size: Size; radius: number }
 
         <div style={{ display: "flex", flexGrow: 1 }} />
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: lineSize * 0.95, color: tok.fgMuted }}>
-          <div style={{ display: "flex", gap: 8 * s }}>
-            <span style={{ color: tok.fgFaint }}>{">"}</span>
-            <span>{t.readTime} read</span>
+        {(t.readTime || t.handle) ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: lineSize * 0.95, color: tok.fgMuted }}>
+            {t.readTime ? (
+              <div style={{ display: "flex", gap: 8 * s }}>
+                <span style={{ color: tok.fgFaint }}>{">"}</span>
+                <span>{t.readTime} read</span>
+              </div>
+            ) : (
+              <div style={{ display: "flex" }} />
+            )}
+            {t.handle ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 * s, color: tok.fgFaint }}>
+                <div style={{ width: 8 * s, height: 8 * s, borderRadius: 999, background: t.accent }} />
+                {t.handle}
+              </div>
+            ) : (
+              <div style={{ display: "flex" }} />
+            )}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 * s, color: tok.fgFaint }}>
-            <div style={{ width: 8 * s, height: 8 * s, borderRadius: 999, background: t.accent }} />
-            {t.handle}
-          </div>
-        </div>
+        ) : null}
       </div>
     </Root>
   );
@@ -403,23 +453,25 @@ function Spotlight({ t, size, radius }: { t: Tweaks; size: Size; radius: number 
           gap: 28 * s,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10 * s,
-            padding: `${8 * s}px ${16 * s}px`,
-            borderRadius: 999,
-            background: tok.card,
-            border: `1px solid ${tok.line}`,
-            fontFamily: MONO,
-            fontSize: metaSize,
-            color: tok.fgMuted,
-          }}
-        >
-          <div style={{ width: 7 * s, height: 7 * s, borderRadius: 999, background: t.accent }} />
-          {t.tag}
-        </div>
+        {t.tag ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10 * s,
+              padding: `${8 * s}px ${16 * s}px`,
+              borderRadius: 999,
+              background: tok.card,
+              border: `1px solid ${tok.line}`,
+              fontFamily: MONO,
+              fontSize: metaSize,
+              color: tok.fgMuted,
+            }}
+          >
+            <div style={{ width: 7 * s, height: 7 * s, borderRadius: 999, background: t.accent }} />
+            {t.tag}
+          </div>
+        ) : null}
 
         <div
           style={{
@@ -442,22 +494,28 @@ function Spotlight({ t, size, radius }: { t: Tweaks; size: Size; radius: number 
           </div>
         ) : null}
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 * s, marginTop: 8 * s, fontFamily: MONO, fontSize: metaSize, color: tok.fgMuted }}>
-          {t.showAvatar ? <Avatar d={32 * s} tok={tok} name={t.author} /> : null}
-          <span style={{ color: tok.fg }}>{t.author}</span>
-          <span style={{ color: tok.fgFaint }}>·</span>
-          <span>{t.date}</span>
-          <span style={{ color: tok.fgFaint }}>·</span>
-          <span>{t.readTime}</span>
-        </div>
+        {(t.showAvatar || t.author || t.date || t.readTime) ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 12 * s, marginTop: 8 * s, fontFamily: MONO, fontSize: metaSize, color: tok.fgMuted }}>
+            {t.showAvatar ? <Avatar d={32 * s} tok={tok} name={t.author} /> : null}
+            {t.author ? <span style={{ color: tok.fg }}>{t.author}</span> : null}
+            {t.author && (t.date || t.readTime) ? (
+              <span style={{ color: tok.fgFaint }}>·</span>
+            ) : null}
+            {metaNodes(metaParts(t.date, t.readTime), tok.fgFaint)}
+          </div>
+        ) : null}
       </div>
 
-      <div style={{ position: "absolute", top: pad * 0.6, left: pad * 0.6, display: "flex", fontFamily: MONO, fontSize: metaSize, color: tok.fgMuted }}>
-        {t.site}
-      </div>
-      <div style={{ position: "absolute", top: pad * 0.6, right: pad * 0.6, display: "flex", fontFamily: MONO, fontSize: metaSize, color: tok.fgFaint }}>
-        {t.handle}
-      </div>
+      {t.site ? (
+        <div style={{ position: "absolute", top: pad * 0.6, left: pad * 0.6, display: "flex", fontFamily: MONO, fontSize: metaSize, color: tok.fgMuted }}>
+          {t.site}
+        </div>
+      ) : null}
+      {t.handle ? (
+        <div style={{ position: "absolute", top: pad * 0.6, right: pad * 0.6, display: "flex", fontFamily: MONO, fontSize: metaSize, color: tok.fgFaint }}>
+          {t.handle}
+        </div>
+      ) : null}
     </Root>
   );
 }
@@ -544,40 +602,46 @@ function Square({ t, size, radius }: { t: Tweaks; size: Size; radius: number }) 
         }}
       >
         {/* Top row */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            fontFamily: MONO,
-            fontSize: metaSize,
-            color: tok.fgMuted,
-          }}
-        >
+        {(t.tag || t.site) && (
           <div
             style={{
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 8 * s,
-              padding: `${6 * s}px ${12 * s}px`,
-              borderRadius: 999,
-              border: `1px solid ${tok.line}`,
-              background: tok.card,
+              fontFamily: MONO,
+              fontSize: metaSize,
+              color: tok.fgMuted,
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                width: 6 * s,
-                height: 6 * s,
-                borderRadius: 999,
-                background: t.accent,
-              }}
-            />
-            {t.tag}
+            {t.tag ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8 * s,
+                  padding: `${6 * s}px ${12 * s}px`,
+                  borderRadius: 999,
+                  border: `1px solid ${tok.line}`,
+                  background: tok.card,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    width: 6 * s,
+                    height: 6 * s,
+                    borderRadius: 999,
+                    background: t.accent,
+                  }}
+                />
+                {t.tag}
+              </div>
+            ) : (
+              <div style={{ display: "flex" }} />
+            )}
+            {t.site ? <div style={{ display: "flex" }}>{t.site}</div> : <div style={{ display: "flex" }} />}
           </div>
-          <div style={{ display: "flex" }}>{t.site}</div>
-        </div>
+        )}
 
         {/* Image card */}
         <div
@@ -623,33 +687,33 @@ function Square({ t, size, radius }: { t: Tweaks; size: Size; radius: number }) 
             >
               {t.title}
             </div>
+            {metaParts(t.author, t.date, t.readTime).length > 0 ? (
+              <div
+                style={{
+                  display: "flex",
+                  fontFamily: MONO,
+                  fontSize: metaSize * 0.85,
+                  color: tok.fgMuted,
+                  gap: 10 * s,
+                }}
+              >
+                {metaNodes(metaParts(t.author, t.date, t.readTime), tok.fgFaint)}
+              </div>
+            ) : null}
+          </div>
+          {t.handle ? (
             <div
               style={{
                 display: "flex",
                 fontFamily: MONO,
-                fontSize: metaSize * 0.85,
-                color: tok.fgMuted,
-                gap: 10 * s,
+                fontSize: metaSize,
+                color: tok.fgFaint,
+                letterSpacing: "0.05em",
               }}
             >
-              <span>{t.author}</span>
-              <span style={{ color: tok.fgFaint }}>·</span>
-              <span>{t.date}</span>
-              <span style={{ color: tok.fgFaint }}>·</span>
-              <span>{t.readTime}</span>
+              ↗ {t.handle}
             </div>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              fontFamily: MONO,
-              fontSize: metaSize,
-              color: tok.fgFaint,
-              letterSpacing: "0.05em",
-            }}
-          >
-            ↗ {t.handle}
-          </div>
+          ) : null}
         </div>
       </div>
     </Root>

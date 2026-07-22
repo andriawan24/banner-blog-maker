@@ -91,6 +91,12 @@ export type ThemeTokens = {
   card: string;
 };
 
+// Filters out empty/blank metadata fields (date, readTime, tag, author, etc.)
+// so renderers can join only the values a user actually supplied.
+export function metaParts(...parts: Array<string | null | undefined>): string[] {
+  return parts.filter((p): p is string => Boolean(p && p.trim()));
+}
+
 export function themeTokens(theme: Theme): ThemeTokens {
   if (theme === "light") {
     return {

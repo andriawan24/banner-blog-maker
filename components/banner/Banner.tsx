@@ -9,7 +9,30 @@ import {
   type Background,
   type Variant,
   themeTokens,
+  metaParts,
 } from "@/lib/banner";
+
+function MetaLine({
+  parts,
+  dotColor,
+  style,
+}: {
+  parts: string[];
+  dotColor: string;
+  style?: React.CSSProperties;
+}) {
+  if (parts.length === 0) return null;
+  return (
+    <span style={style}>
+      {parts.map((part, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <span style={{ color: dotColor }}> · </span>}
+          {part}
+        </React.Fragment>
+      ))}
+    </span>
+  );
+}
 
 const SANS = "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif";
 const MONO = "var(--font-geist-mono), ui-monospace, monospace";
@@ -203,40 +226,46 @@ function EditorialBanner({ t, size }: { t: Tweaks; size: Size }) {
         }}
       >
         {/* Top row: tag + site */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            fontFamily: MONO,
-            fontSize: metaSize,
-            color: tok.fgMuted,
-          }}
-        >
-          <span
+        {(t.tag || t.site) && (
+          <div
             style={{
-              display: "inline-flex",
+              display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 8 * s,
-              padding: `${6 * s}px ${12 * s}px`,
-              borderRadius: 999,
-              border: `1px solid ${tok.line}`,
-              background: tok.card,
+              fontFamily: MONO,
+              fontSize: metaSize,
+              color: tok.fgMuted,
             }}
           >
-            <i
-              style={{
-                width: 6 * s,
-                height: 6 * s,
-                borderRadius: "50%",
-                background: t.accent,
-                display: "inline-block",
-              }}
-            />
-            {t.tag}
-          </span>
-          <span style={{ letterSpacing: "0.02em" }}>{t.site}</span>
-        </div>
+            {t.tag ? (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8 * s,
+                  padding: `${6 * s}px ${12 * s}px`,
+                  borderRadius: 999,
+                  border: `1px solid ${tok.line}`,
+                  background: tok.card,
+                }}
+              >
+                <i
+                  style={{
+                    width: 6 * s,
+                    height: 6 * s,
+                    borderRadius: "50%",
+                    background: t.accent,
+                    display: "inline-block",
+                  }}
+                />
+                {t.tag}
+              </span>
+            ) : (
+              <span />
+            )}
+            {t.site && <span style={{ letterSpacing: "0.02em" }}>{t.site}</span>}
+          </div>
+        )}
 
         {/* Title block */}
         <div
@@ -295,34 +324,30 @@ function EditorialBanner({ t, size }: { t: Tweaks; size: Size }) {
             <AvatarPlaceholder size={48 * s} accent={t.accent} theme={t.theme} />
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 4 * s }}>
-            <div style={{ fontSize: metaSize * 1.05, fontWeight: 500, color: tok.fg }}>
-              {t.author}
-            </div>
+            {t.author && (
+              <div style={{ fontSize: metaSize * 1.05, fontWeight: 500, color: tok.fg }}>
+                {t.author}
+              </div>
+            )}
+            <MetaLine
+              parts={metaParts(t.date, t.readTime)}
+              dotColor={tok.fgFaint}
+              style={{ fontFamily: MONO, fontSize: metaSize * 0.85, color: tok.fgMuted }}
+            />
+          </div>
+          <div style={{ flex: 1 }} />
+          {t.handle && (
             <div
               style={{
                 fontFamily: MONO,
-                fontSize: metaSize * 0.85,
-                color: tok.fgMuted,
-                display: "flex",
-                gap: 10 * s,
+                fontSize: metaSize,
+                color: tok.fgFaint,
+                letterSpacing: "0.05em",
               }}
             >
-              <span>{t.date}</span>
-              <span style={{ color: tok.fgFaint }}>·</span>
-              <span>{t.readTime}</span>
+              ↗ {t.handle}
             </div>
-          </div>
-          <div style={{ flex: 1 }} />
-          <div
-            style={{
-              fontFamily: MONO,
-              fontSize: metaSize,
-              color: tok.fgFaint,
-              letterSpacing: "0.05em",
-            }}
-          >
-            ↗ {t.handle}
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -380,10 +405,14 @@ function TerminalBanner({ t, size }: { t: Tweaks; size: Size }) {
             alignItems: "center",
           }}
         >
-          <span style={{ color: t.accent }}>
-            ~/{t.site.replace(/^https?:\/\//, "")}
-          </span>
-          <span style={{ color: tok.fgFaint }}>·</span>
+          {t.site && (
+            <>
+              <span style={{ color: t.accent }}>
+                ~/{t.site.replace(/^https?:\/\//, "")}
+              </span>
+              <span style={{ color: tok.fgFaint }}>·</span>
+            </>
+          )}
           <span>main</span>
           <span style={{ color: tok.fgFaint }}>$</span>
           <span style={{ color: tok.fg }}>cat posts/{slug}.mdx</span>
@@ -392,24 +421,38 @@ function TerminalBanner({ t, size }: { t: Tweaks; size: Size }) {
         <div style={{ height: 1, background: tok.line }} />
 
         {/* Frontmatter-style metadata */}
-        <div
-          style={{
-            fontSize: lineSize,
-            color: tok.fgMuted,
-            display: "grid",
-            gridTemplateColumns: "auto 1fr",
-            columnGap: 24 * s,
-            rowGap: 8 * s,
-            alignItems: "baseline",
-          }}
-        >
-          <span style={{ color: tok.fgFaint }}>tag:</span>
-          <span style={{ color: t.accent }}>{`"${t.tag}"`}</span>
-          <span style={{ color: tok.fgFaint }}>author:</span>
-          <span style={{ color: tok.fg }}>{`"${t.author}"`}</span>
-          <span style={{ color: tok.fgFaint }}>date:</span>
-          <span>{`"${t.date}"`}</span>
-        </div>
+        {(t.tag || t.author || t.date) && (
+          <div
+            style={{
+              fontSize: lineSize,
+              color: tok.fgMuted,
+              display: "grid",
+              gridTemplateColumns: "auto 1fr",
+              columnGap: 24 * s,
+              rowGap: 8 * s,
+              alignItems: "baseline",
+            }}
+          >
+            {t.tag && (
+              <>
+                <span style={{ color: tok.fgFaint }}>tag:</span>
+                <span style={{ color: t.accent }}>{`"${t.tag}"`}</span>
+              </>
+            )}
+            {t.author && (
+              <>
+                <span style={{ color: tok.fgFaint }}>author:</span>
+                <span style={{ color: tok.fg }}>{`"${t.author}"`}</span>
+              </>
+            )}
+            {t.date && (
+              <>
+                <span style={{ color: tok.fgFaint }}>date:</span>
+                <span>{`"${t.date}"`}</span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Title */}
         <h1
@@ -447,38 +490,46 @@ function TerminalBanner({ t, size }: { t: Tweaks; size: Size }) {
         <div style={{ flex: 1 }} />
 
         {/* Footer */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            fontSize: lineSize * 0.95,
-            color: tok.fgMuted,
-          }}
-        >
-          <span>
-            <span style={{ color: tok.fgFaint }}>{">"}</span> {t.readTime} read
-          </span>
-          <span
+        {(t.readTime || t.handle) && (
+          <div
             style={{
-              color: tok.fgFaint,
               display: "flex",
               alignItems: "center",
-              gap: 8 * s,
+              justifyContent: "space-between",
+              fontSize: lineSize * 0.95,
+              color: tok.fgMuted,
             }}
           >
-            <i
-              style={{
-                width: 8 * s,
-                height: 8 * s,
-                borderRadius: "50%",
-                background: t.accent,
-                display: "inline-block",
-              }}
-            />
-            {t.handle}
-          </span>
-        </div>
+            {t.readTime ? (
+              <span>
+                <span style={{ color: tok.fgFaint }}>{">"}</span> {t.readTime} read
+              </span>
+            ) : (
+              <span />
+            )}
+            {t.handle && (
+              <span
+                style={{
+                  color: tok.fgFaint,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8 * s,
+                }}
+              >
+                <i
+                  style={{
+                    width: 8 * s,
+                    height: 8 * s,
+                    borderRadius: "50%",
+                    background: t.accent,
+                    display: "inline-block",
+                  }}
+                />
+                {t.handle}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -524,32 +575,34 @@ function SpotlightBanner({ t, size }: { t: Tweaks; size: Size }) {
         }}
       >
         {/* Tag pill */}
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10 * s,
-            padding: `${8 * s}px ${16 * s}px`,
-            borderRadius: 999,
-            background: tok.card,
-            border: `1px solid ${tok.line}`,
-            fontFamily: MONO,
-            fontSize: metaSize,
-            color: tok.fgMuted,
-            letterSpacing: "0.02em",
-          }}
-        >
-          <i
+        {t.tag && (
+          <div
             style={{
-              width: 7 * s,
-              height: 7 * s,
-              borderRadius: "50%",
-              background: t.accent,
-              boxShadow: `0 0 ${10 * s}px ${t.accent}`,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10 * s,
+              padding: `${8 * s}px ${16 * s}px`,
+              borderRadius: 999,
+              background: tok.card,
+              border: `1px solid ${tok.line}`,
+              fontFamily: MONO,
+              fontSize: metaSize,
+              color: tok.fgMuted,
+              letterSpacing: "0.02em",
             }}
-          />
-          {t.tag}
-        </div>
+          >
+            <i
+              style={{
+                width: 7 * s,
+                height: 7 * s,
+                borderRadius: "50%",
+                background: t.accent,
+                boxShadow: `0 0 ${10 * s}px ${t.accent}`,
+              }}
+            />
+            {t.tag}
+          </div>
+        )}
 
         {/* Title */}
         <h1
@@ -583,57 +636,63 @@ function SpotlightBanner({ t, size }: { t: Tweaks; size: Size }) {
         )}
 
         {/* Meta row */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12 * s,
-            marginTop: 8 * s,
-            fontFamily: MONO,
-            fontSize: metaSize,
-            color: tok.fgMuted,
-          }}
-        >
-          {t.showAvatar && (
-            <AvatarPlaceholder size={32 * s} accent={t.accent} theme={t.theme} />
-          )}
-          <span style={{ color: tok.fg }}>{t.author}</span>
-          <span style={{ color: tok.fgFaint }}>·</span>
-          <span>{t.date}</span>
-          <span style={{ color: tok.fgFaint }}>·</span>
-          <span>{t.readTime}</span>
-        </div>
+        {(t.showAvatar || t.author || t.date || t.readTime) && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12 * s,
+              marginTop: 8 * s,
+              fontFamily: MONO,
+              fontSize: metaSize,
+              color: tok.fgMuted,
+            }}
+          >
+            {t.showAvatar && (
+              <AvatarPlaceholder size={32 * s} accent={t.accent} theme={t.theme} />
+            )}
+            {t.author && <span style={{ color: tok.fg }}>{t.author}</span>}
+            {t.author && (t.date || t.readTime) && (
+              <span style={{ color: tok.fgFaint }}>·</span>
+            )}
+            <MetaLine parts={metaParts(t.date, t.readTime)} dotColor={tok.fgFaint} />
+          </div>
+        )}
       </div>
 
       {/* Corner brand */}
-      <div
-        style={{
-          position: "absolute",
-          top: pad * 0.6,
-          left: pad * 0.6,
-          fontFamily: MONO,
-          fontSize: metaSize,
-          color: tok.fgMuted,
-          letterSpacing: "0.02em",
-        }}
-      >
-        {t.site}
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          top: pad * 0.6,
-          right: pad * 0.6,
-          fontFamily: MONO,
-          fontSize: metaSize,
-          color: tok.fgFaint,
-          display: "flex",
-          alignItems: "center",
-          gap: 8 * s,
-        }}
-      >
-        <span>{t.handle}</span>
-      </div>
+      {t.site && (
+        <div
+          style={{
+            position: "absolute",
+            top: pad * 0.6,
+            left: pad * 0.6,
+            fontFamily: MONO,
+            fontSize: metaSize,
+            color: tok.fgMuted,
+            letterSpacing: "0.02em",
+          }}
+        >
+          {t.site}
+        </div>
+      )}
+      {t.handle && (
+        <div
+          style={{
+            position: "absolute",
+            top: pad * 0.6,
+            right: pad * 0.6,
+            fontFamily: MONO,
+            fontSize: metaSize,
+            color: tok.fgFaint,
+            display: "flex",
+            alignItems: "center",
+            gap: 8 * s,
+          }}
+        >
+          <span>{t.handle}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -729,40 +788,46 @@ function SquareBanner({ t, size }: { t: Tweaks; size: Size }) {
         }}
       >
         {/* Top row: tag + site */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            fontFamily: MONO,
-            fontSize: metaSize,
-            color: tok.fgMuted,
-          }}
-        >
-          <span
+        {(t.tag || t.site) && (
+          <div
             style={{
-              display: "inline-flex",
+              display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 8 * s,
-              padding: `${6 * s}px ${12 * s}px`,
-              borderRadius: 999,
-              border: `1px solid ${tok.line}`,
-              background: tok.card,
+              fontFamily: MONO,
+              fontSize: metaSize,
+              color: tok.fgMuted,
             }}
           >
-            <i
-              style={{
-                width: 6 * s,
-                height: 6 * s,
-                borderRadius: "50%",
-                background: t.accent,
-                display: "inline-block",
-              }}
-            />
-            {t.tag}
-          </span>
-          <span style={{ letterSpacing: "0.02em" }}>{t.site}</span>
-        </div>
+            {t.tag ? (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8 * s,
+                  padding: `${6 * s}px ${12 * s}px`,
+                  borderRadius: 999,
+                  border: `1px solid ${tok.line}`,
+                  background: tok.card,
+                }}
+              >
+                <i
+                  style={{
+                    width: 6 * s,
+                    height: 6 * s,
+                    borderRadius: "50%",
+                    background: t.accent,
+                    display: "inline-block",
+                  }}
+                />
+                {t.tag}
+              </span>
+            ) : (
+              <span />
+            )}
+            {t.site && <span style={{ letterSpacing: "0.02em" }}>{t.site}</span>}
+          </div>
+        )}
 
         {/* Image card — centered, fills available space */}
         <div
@@ -813,32 +878,24 @@ function SquareBanner({ t, size }: { t: Tweaks; size: Size }) {
             >
               {t.title}
             </div>
+            <MetaLine
+              parts={metaParts(t.author, t.date, t.readTime)}
+              dotColor={tok.fgFaint}
+              style={{ fontFamily: MONO, fontSize: metaSize * 0.85, color: tok.fgMuted }}
+            />
+          </div>
+          {t.handle && (
             <div
               style={{
                 fontFamily: MONO,
-                fontSize: metaSize * 0.85,
-                color: tok.fgMuted,
-                display: "flex",
-                gap: 10 * s,
+                fontSize: metaSize,
+                color: tok.fgFaint,
+                letterSpacing: "0.05em",
               }}
             >
-              <span>{t.author}</span>
-              <span style={{ color: tok.fgFaint }}>·</span>
-              <span>{t.date}</span>
-              <span style={{ color: tok.fgFaint }}>·</span>
-              <span>{t.readTime}</span>
+              ↗ {t.handle}
             </div>
-          </div>
-          <div
-            style={{
-              fontFamily: MONO,
-              fontSize: metaSize,
-              color: tok.fgFaint,
-              letterSpacing: "0.05em",
-            }}
-          >
-            ↗ {t.handle}
-          </div>
+          )}
         </div>
       </div>
     </div>
