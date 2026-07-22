@@ -80,7 +80,8 @@ export default function ProfilePage() {
     }
   }
 
-  async function deleteConfig(id: string) {
+  async function deleteConfig(id: string, name: string) {
+    if (!window.confirm(`Delete "${name}"? This can't be undone.`)) return;
     setBusyId(id);
     setError(null);
     try {
@@ -232,7 +233,7 @@ export default function ProfilePage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => deleteConfig(rc.id)}
+                        onClick={() => deleteConfig(rc.id, rc.name)}
                         disabled={busyId === rc.id}
                         className="min-h-[44px] rounded-lg border border-line bg-raised px-3 text-xs text-fg-faint transition hover:border-red-400/50 hover:text-red-400 disabled:opacity-50 lg:min-h-0 lg:py-1.5"
                       >

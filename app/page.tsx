@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { jsPDF } from "jspdf";
 import JSZip from "jszip";
 import { Banner, type Size } from "@/components/banner/Banner";
@@ -38,13 +39,15 @@ const DEFAULTS: SavedBannerConfig = {
 };
 
 export default function Page() {
+  const { status: sessionStatus } = useSession();
   const [t, setT] = useState<Tweaks>(DEFAULT_TWEAKS);
   const [variant, setVariant] = useState<Variant>("editorial");
   const [format, setFormat] = useState<ExportFormat>("png");
   const [rounded, setRounded] = useState(false);
   const [busy, setBusy] = useState<null | "preview" | "download">(null);
 
-  const [saved, setSaved] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const set = <K extends keyof Tweaks>(key: K, value: Tweaks[K]) =>
     setT((prev) => ({ ...prev, [key]: value }));
@@ -97,11 +100,39 @@ export default function Page() {
     };
   }, []);
 
-  function saveConfig() {
+  async function saveConfig() {
     const config: SavedBannerConfig = { t, variant, format, rounded };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
+
+    // Signed-out users only get the browser-local save above.
+    if (sessionStatus !== "authenticated") {
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 1500);
+      return;
+    }
+
+    const name = window.prompt("Name this banner:", t.title || "Untitled banner");
+    if (name === null) return; // user cancelled the account save
+
+    setSaveState("saving");
+    setSaveError(null);
+    try {
+      const res = await fetch("/api/banner-configs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() || "Untitled banner", config }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? "Could not save to your account.");
+      }
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 1500);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Could not save to your account.");
+      setSaveState("error");
+      setTimeout(() => setSaveState("idle"), 2500);
+    }
   }
 
   function resetConfig() {
@@ -375,9 +406,16 @@ export default function Page() {
             <button
               type="button"
               onClick={saveConfig}
-              className="min-h-[44px] flex-1 rounded-lg border border-line bg-raised px-4 py-2.5 text-sm font-medium text-fg transition hover:border-fg-faint lg:min-h-0"
+              disabled={saveState === "saving"}
+              className="min-h-[44px] flex-1 rounded-lg border border-line bg-raised px-4 py-2.5 text-sm font-medium text-fg transition hover:border-fg-faint disabled:opacity-50 lg:min-h-0"
             >
-              {saved ? "Saved ✓" : "Save config"}
+              {saveState === "saving"
+                ? "Saving…"
+                : saveState === "saved"
+                  ? "Saved ✓"
+                  : saveState === "error"
+                    ? "Save failed"
+                    : "Save config"}
             </button>
             <button
               type="button"
@@ -387,8 +425,13 @@ export default function Page() {
               Reset
             </button>
           </div>
+          {saveState === "error" && saveError && (
+            <p className="text-[11px] text-red-400">{saveError}</p>
+          )}
           <p className="text-[11px] text-fg-faint">
-            Saves to this browser. Reset restores defaults.
+            {sessionStatus === "authenticated"
+              ? "Saves to this browser and to your account. Reset restores defaults."
+              : "Saves to this browser. Sign in to also save to your account."}
           </p>
           <Link
             href="/profile"
